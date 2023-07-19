@@ -8,6 +8,7 @@ import os
 import json
 from dotenv import load_dotenv
 load_dotenv()
+from django.views.decorators.csrf import csrf_exempt
 from .access_token import generate_access_token
 
 
@@ -31,19 +32,17 @@ def register_url(request):
         'Content-Type': 'application/json'
     }
     payload = {
-        'ShortCode': '601426',
+        'ShortCode': '600998',
         'ResponseType': 'Completed',
-        'ConfirmationURL': "https://cab1-102-167-54-163.ngrok-free.app/confirmation",
-        'ValidationURL': "https://cab1-102-167-54-163.ngrok-free.app/validationURL",
+        'ConfirmationURL': os.getenv('C2B_VALIDATION_URL'),
+        'ValidationURL': os.getenv('C2B_CONFIRMATION_URL'),
     }
-    response = requests.post(url, json=payload, headers=headers).json()
-    return JsonResponse(response)
+    response = requests.post(url, json=payload, headers=headers)
+    return HttpResponse(response)
 
 # function for simulating C2B API call to Daraja
 
 def simulate_C2B_API(request):
-    # reg_url = register_url(request)
-    # print(reg_url)
     url = os.getenv('C2B_SIMULATION_URL')
     token = generate_access_token()
     headers = {
@@ -58,15 +57,14 @@ def simulate_C2B_API(request):
         'BillRefNumber': os.getenv('C2B_BILLREFERENCENUMBER')
     }
     response = requests.post(url, json=payload, headers=headers).json()
-    print(os.getenv('C2B_SHORT_CODE'))
-    print(os.getenv('C2B_COMMAND_ID'))
-    print(os.getenv('C2B_TEST_AMOUNT'))
-    print(os.getenv('MPESA_TEST_MSISDN'))
-    print(os.getenv('C2B_BILLREFERENCENUMBER'))
-    
     return JsonResponse(response)
 
+@csrf_exempt
 def validationURL(request):
+    data = request.body.decode('utf-8')
+    with open('validation.txt', 'a') as file:
+        file.write(data)
+    # validation logic goes in here
     response = {
         "ResultCode": 0,
         "ResultDesc": "Accepted"
@@ -74,7 +72,12 @@ def validationURL(request):
     return JsonResponse(response)
 
 # function for Validating C2B API payment response
-def confirmationURL(request): 
+@csrf_exempt
+def confirmationURL(request):
+    data = request.body.decode('utf-8')
+    with open('confirmation.txt', 'a') as file:
+        file.write(data)
+    # Save to Db and retun message to the user
 
     context = {
         "ResultCode": 0,
